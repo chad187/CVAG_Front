@@ -1,0 +1,64 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ test, prod ]
+  pull_request:
+    branches: [ test, prod ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install & Build
+        run: |
+          # Enable Corepack to use the yarn version defined in package.json
+          corepack enable
+          yarn install --immutable
+          
+          # Inject branch-specific environment variables
+          if [ "${{ github.ref_name }}" == "prod" ]; then
+            echo "${{ secrets.PROD_ENV_VARS }}" > .env.production
+          else
+            echo "${{ secrets.TEST_ENV_VARS }}" > .env.production
+          fi
+          yarn build
+
+      # 1. Prepare Environment
+      - name: Prepare Environment
+        if: github.event_name == 'push'
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.KEY }}
+          script: ${{ github.ref_name == 'prod' && secrets.PROD_PRE_DEPLOY_SCRIPT || secrets.TEST_PRE_DEPLOY_SCRIPT }}
+
+      # 2. Deploy Files
+      - name: Deploy to Server
+        if: github.event_name == 'push'
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.KEY }}
+          source: "dist/*"
+          target: ${{ github.ref_name == 'prod' && secrets.PROD_TARGET || secrets.TEST_TARGET }}
+          strip_components: 1
+
+      # 3. Finalize Deployment
+      - name: Finalize & Restart
+        if: github.event_name == 'push'
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.KEY }}
+          script: ${{ github.ref_name == 'prod' && secrets.PROD_POST_DEPLOY_SCRIPT || secrets.TEST_POST_DEPLOY_SCRIPT }}
