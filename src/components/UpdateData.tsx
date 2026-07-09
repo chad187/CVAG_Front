@@ -68,8 +68,6 @@ const UpdateData: React.FC<UpdateDataProps> = ({
           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(firmwareUpdate.update_status)}`}>
             {firmwareUpdate.update_status}
           </span>
-          
-          {firmwareUpdate.update_status?.toLowerCase() === 'pending' && (
             <button
               type="button"
               onClick={() => onCancelUpdate(nodeId)}
@@ -77,7 +75,6 @@ const UpdateData: React.FC<UpdateDataProps> = ({
             >
               Cancel Update
             </button>
-          )}
         </div>
       </div>
 
