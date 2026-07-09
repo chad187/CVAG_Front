@@ -1,17 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useNodesStore, formatUptime } from '../stores/nodesStore';
 import Breadcrumbs from './Breadcrumbs';
-import FirmwareUpdateForm from './FirmwareUpdateForm';
 
 const Nodes: React.FC = () => {
   const navigate = useNavigate();
   const { id: yardId } = useParams<{ id: string }>();
   const { user, logout } = useAuthStore();
-  const { currentCompany, currentYard, yardNodes, isLoading, error, fetchYardNodes, handleBatchFirmwareUpdate, fetchYardMetrics, yardMetrics } = useNodesStore();
-
-  const [showBatchForm, setShowBatchForm] = useState(false);
+  const { currentCompany, currentYard, yardNodes, isLoading, error, fetchYardNodes, fetchYardMetrics, yardMetrics } = useNodesStore();
 
   useEffect(() => {
     if (yardId) {
@@ -116,20 +113,6 @@ const Nodes: React.FC = () => {
                     </div>
                   </>
                 )}    
-                {/* Toggle Button */}
-                {yardNodes.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setShowBatchForm(!showBatchForm)}
-                    className={`mt-4 inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold shadow-sm transition-colors ring-1 ring-inset ${
-                      showBatchForm 
-                        ? 'bg-gray-50 text-gray-700 ring-gray-300 hover:bg-gray-100' 
-                        : 'bg-indigo-600 text-white ring-transparent hover:bg-indigo-700'
-                    }`}
-                  >
-                    {showBatchForm ? 'Cancel Batch Update' : 'Update All Node Firmware'}
-                  </button>
-                )}
               </div>
               <div className="text-right sm:self-start">
                 <div className="text-sm text-gray-500">{currentYard?.node_count ?? 0} nodes</div>
@@ -141,25 +124,6 @@ const Nodes: React.FC = () => {
               </div>
             </div>
           </div>
-
-          {/* Conditionally Rendered Batch Update Form */}
-          {showBatchForm && yardNodes.length > 0 && (
-            <div className="animate-fade-in">
-              <FirmwareUpdateForm
-                initialVersion="1" // Default generic fallback baseline string for bulk targets
-                fallbackFirmwareName="Select batch firmware binary file"
-                isLoading={isLoading}
-                onSubmit={async (version, ssid, password, updateUrl, file) => {
-                  // Hand the continuous payload and structural ID collection directly to your store handler
-                  if (!file) return;
-                  const yardNodeIDs: string[] = yardNodes?.map((node: any) => node.id) || [];
-                  await handleBatchFirmwareUpdate(yardNodeIDs, version, ssid, password, updateUrl, file);
-                  // Hide form workspace automatically upon successful task dispatch
-                  setShowBatchForm(false);
-                }}
-              />
-            </div>
-          )}
         </div>
 
         <div className="grid gap-6">
