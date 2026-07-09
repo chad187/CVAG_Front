@@ -512,10 +512,15 @@ export const useNodesStore = create<NodesState>()(
         toast.success('Firmware canceled');
         await useNodesStore.getState().fetchNodeDetails(id);
       } catch (error: any) {
-        console.error('Failed to delete scheduled firmware update:', error);
-        const message = error.response?.data?.error || 'Failed to delete scheduled firmware update';
-        set({ isLoading: false, error: message });
-        toast.error(message);
+        if (error.response?.status === 410) {
+          toast.success('Firmware canceled: However, it might be too late to stop the update.');
+          await useNodesStore.getState().fetchNodeDetails(id);
+        } else {
+          console.error('Failed to delete scheduled firmware update:', error);
+          const message = error.response?.data?.error || 'Failed to delete scheduled firmware update';
+          set({ isLoading: false, error: message });
+          toast.error(message);
+        }
       }
     },
 
