@@ -29,6 +29,10 @@ export interface NodeStatus {
   version: string;
   battery: number;
   warning_temp: number;
+  location: {
+    lat: number;
+    lng: number;
+  };
   created_at: string;
   updated_at: string;
 }
@@ -101,7 +105,7 @@ interface NodesState {
   resetBattery: (id: string) => Promise<void>;
   updateNodeFirmware: (id: string, version: string, ssid: string, password: string, updateUrl: string, firmwareFile: File) => Promise<void>;
   handleBatchFirmwareUpdate: (nodeIdsArray: string[], version: string, ssid: string, password: string, updateUrl: string, firmwareFile: File) => Promise<void>;
-  updateNodeDetails: (id: string, name: string, warningTemp: number) => Promise<void>;
+  updateNodeDetails: (id: string, name: string, warningTemp: number, lat: number, lng: number) => Promise<void>;
   clearError: () => void;
 }
 
@@ -468,7 +472,7 @@ export const useNodesStore = create<NodesState>()(
       }
     },
 
-    updateNodeDetails: async (id: string, name: string, warningTemp: number) => {
+    updateNodeDetails: async (id: string, name: string, warningTemp: number, lat: number, lng: number) => {
       const token = useAuthStore.getState().token;
       if (IS_PRODUCTION && !token) {
         set({ error: 'Not authenticated' });
@@ -480,6 +484,7 @@ export const useNodesStore = create<NodesState>()(
         await axios.put(`${API_BASE}/nodes/${id}/details`, {
           name,
           warning_temp: warningTemp,
+          location: { lat, lng }
         }, {
           headers: buildAuthHeaders(token),
         });
