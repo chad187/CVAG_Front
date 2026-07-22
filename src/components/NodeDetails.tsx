@@ -363,7 +363,7 @@ const NodeDetails: React.FC = () => {
                         domain={['auto', 'auto']} 
                       />
                       <Tooltip 
-                        labelFormatter={(str) => new Date(str).toLocaleString()}
+                        labelFormatter={(str) => str ? new Date(String(str)).toLocaleString() : ''}
                         formatter={(value: any) => [`${value}°F`, 'Temperature']} 
                       />
                       <Line type="monotone" dataKey="temp" stroke="#2563eb" strokeWidth={2} dot={true} />
