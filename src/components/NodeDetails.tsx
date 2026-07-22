@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Line, LineChart, ResponsiveContainer, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap, LayersControl } from 'react-leaflet';
 import L from 'leaflet';
 import { useNodesStore } from '../stores/nodesStore';
 import { useAuthStore } from '../stores/authStore';
 import Breadcrumbs from './Breadcrumbs';
 import UpdateData from './UpdateData';
 import FirmwareUpdateForm from './FirmwareUpdateForm';
-import { useMap } from 'react-leaflet';
 
 // Fix default Leaflet marker icon in React-Vite environments
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -319,10 +318,35 @@ const NodeDetails: React.FC = () => {
                   style={{ height: '100%', width: '100%' }}
                 >
                   <MapUpdater lat={lat} lng={lng} />
-                  <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
+                  
+                  <LayersControl position="topright">
+      
+                    {/* Default Street Map */}
+                    <LayersControl.BaseLayer checked name="OpenStreetMap">
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+                    </LayersControl.BaseLayer>
+
+                    {/* Satellite / Esri World Imagery (Example alternative layer) */}
+                    <LayersControl.BaseLayer name="Satellite">
+                      <TileLayer
+                        attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                        url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                      />
+                    </LayersControl.BaseLayer>
+
+                    {/* Topographic Map option */}
+                    <LayersControl.BaseLayer name="Topographic">
+                      <TileLayer
+                        attribution='Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a>'
+                        url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
+                      />
+                    </LayersControl.BaseLayer>
+
+                  </LayersControl>
+
                   <Marker 
                     position={[lat, lng]} 
                     draggable={isEditing}
