@@ -128,6 +128,7 @@ const yardMapSummary = (item: any): YardSummary => ({
 
 export const useNodesStore = create<NodesState>()(
   devtools((set) => ({
+    users: [],
     companies: [],
     companyYards: [],
     yards: [],
