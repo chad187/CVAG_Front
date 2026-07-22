@@ -25,4 +25,3 @@ dist-ssr
 .env
 .yarn/install-state.gz
 .github/workflows/secrets.txt
-yarn.lock
