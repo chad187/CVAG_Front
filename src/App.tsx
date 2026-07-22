@@ -10,6 +10,7 @@ import AllNodes from './components/AllNodes';
 import AllCompanies from './components/AllCompanies';
 import NodeDetails from './components/NodeDetails';
 import { Toaster } from 'react-hot-toast';
+import 'leaflet/dist/leaflet.css';
 
 const IS_PRODUCTION = import.meta.env.VITE_IN_PRODUCTION === 'true';
 
