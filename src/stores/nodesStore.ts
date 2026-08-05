@@ -42,6 +42,27 @@ interface NodeDetail extends NodeStatus {
   firmware_update?: FirmwareUpdate;
 }
 
+interface AlertRecord {
+  name: string;
+  email: string;
+  phone: string;
+  language: string;
+}
+
+interface RunHistoryRecord {
+  date: string | number;
+  message: string;
+}
+
+interface AlertDetailsPayload {
+  message: string;
+  last_run: string;
+  cool_down: number | string;
+  test_email: string;
+  test_phone: string;
+  run_history: RunHistoryRecord[];
+}
+
 export interface YardSummary {
   id: string;
   node_count: number;
@@ -90,9 +111,29 @@ interface NodesState {
   currentCompany: CompanySummary | null;
   currentYard: YardSummary | null;
   selectedNode: NodeDetail | null;
+  AlertData: AlertRecord[];
+  alertDetails: AlertDetailsPayload | null;
   isLoading: boolean;
   error: string | null;
   fetchAllUsers: () => Promise<void>;
+  fetchAlert: (yardId: string) => Promise<void>;
+  submitAlertMessage: (
+    yardId: string,
+    payload: {
+      message: string;
+      last_run: string;
+      cool_down: number;
+      test_email: string;
+      test_phone: string;
+      run_history: RunHistoryRecord[];
+    }
+  ) => Promise<void>;
+  broadcastAlert: (yardId: string) => Promise<void>;
+  testAlertOne: (yardId: string) => Promise<void>;
+  testAlertAll: (yardId: string) => Promise<void>;
+  addAlertUser: (yardId: string, user: AlertRecord) => Promise<void>;
+  deleteAlertUser: (yardId: string, email: string) => Promise<void>;
+  deleteAlertHistory: (yardId: string, date: string | number) => Promise<void>;
   fetchYardMetrics: (yardId: string) => Promise<void>;
   fetchAllYards: () => Promise<void>;
   fetchAllNodes: () => Promise<void>;
@@ -109,7 +150,7 @@ interface NodesState {
   clearError: () => void;
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api';
 const IS_PRODUCTION = import.meta.env.VITE_IN_PRODUCTION === 'true';
 
 const buildAuthHeaders = (token: string | null) => {
@@ -118,6 +159,11 @@ const buildAuthHeaders = (token: string | null) => {
   }
 
   return { Authorization: `Bearer ${token}` };
+};
+
+const buildJsonConfig = (token: string | null) => {
+  const headers = buildAuthHeaders(token);
+  return headers ? { headers: { ...headers, 'Content-Type': 'application/json' } } : { headers: { 'Content-Type': 'application/json' } };
 };
 
 const yardMapSummary = (item: any): YardSummary => ({
@@ -137,6 +183,8 @@ export const useNodesStore = create<NodesState>()(
     currentYard: null,
     yardMetrics: {},
     selectedNode: null,
+    AlertData: [],
+    alertDetails: null,
     isLoading: false,
     error: null,
 
@@ -287,6 +335,294 @@ export const useNodesStore = create<NodesState>()(
           isLoading: false, 
           error: err.response?.data?.error || "Failed to sync system users directory" 
         });
+      }
+    },
+
+    fetchAlert: async (yardId: string) => {
+      const token = useAuthStore.getState().token;
+      if (IS_PRODUCTION && !token) {
+        set({ error: 'Not authenticated' });
+        return;
+      }
+
+      set({ isLoading: true, error: null });
+
+      try {
+        const response = await axios.get(`${API_BASE}/yard/${encodeURIComponent(yardId)}/alert`, {
+          headers: buildAuthHeaders(token),
+        });
+
+        const data = response.data || {};
+        const users: AlertRecord[] = Array.isArray(data.users)
+          ? data.users.map((user: any) => ({
+              name: user.name || '',
+              email: user.email || '',
+              phone: user.phone || '',
+              language: user.language || 'English',
+            }))
+          : [];
+
+        const alertDetails: AlertDetailsPayload = {
+          message: Array.isArray(data.messages) && data.messages.length > 0 ? data.messages[0].message || '' : '',
+          last_run: data.last_run || '',
+          cool_down: data.cool_down ?? '',
+          test_email: data.test_email || '',
+          test_phone: data.test_phone || '',
+          run_history: Array.isArray(data.run_history)
+            ? data.run_history.map((item: any) => ({
+                date: item.date || '',
+                message: item.message || '',
+              }))
+            : [],
+        };
+
+        set({ AlertData: users, alertDetails, isLoading: false });
+      } catch (err: any) {
+        console.error('Failed to load Alert records:', err);
+        set({ isLoading: false, error: err?.response?.data?.error || 'Failed to load Alert records' });
+      }
+    },
+
+    submitAlertMessage: async (yardId: string, payload: {
+      message: string;
+      last_run: string;
+      cool_down: number;
+      test_email: string;
+      test_phone: string;
+      run_history: RunHistoryRecord[];
+    }) => {
+      const token = useAuthStore.getState().token;
+      if (IS_PRODUCTION && !token) {
+        set({ error: 'Not authenticated' });
+        return;
+      }
+
+      set({ isLoading: true, error: null });
+      try {
+        const outgoingPayload = {
+          message: payload.message,
+          cool_down: payload.cool_down,
+          test_email: payload.test_email,
+          test_phone: payload.test_phone,
+          last_run: payload.last_run ? Math.floor(new Date(payload.last_run).getTime() / 1000) : 0,
+        };
+
+        await axios.post(
+          `${API_BASE}/yard/${encodeURIComponent(yardId)}/alert`,
+          outgoingPayload,
+          buildJsonConfig(token)
+        );
+
+        await useNodesStore.getState().fetchAlert(yardId);
+        set({ isLoading: false });
+        toast.success('Alert message submitted');
+      } catch (err: any) {
+        console.error('Failed to submit Alert message:', err);
+        const message = err.response?.data?.error || 'Failed to submit Alert message';
+        set({ isLoading: false, error: message });
+        toast.error(message);
+      }
+    },
+
+    broadcastAlert: async (yardId: string) => {
+      const token = useAuthStore.getState().token;
+      if (IS_PRODUCTION && !token) {
+        set({ error: 'Not authenticated' });
+        return;
+      }
+
+      set({ isLoading: true, error: null });
+      try {
+        await axios.post(
+          `${API_BASE}/yard/${encodeURIComponent(yardId)}/alert/broadcast`,
+          {},
+          buildJsonConfig(token)
+        );
+
+        await useNodesStore.getState().fetchAlert(yardId);
+        set({ isLoading: false });
+        toast.success('Broadcast alert sent');
+      } catch (err: any) {
+        console.error('Failed to broadcast alert:', err);
+        
+        const responseData = err.response?.data;
+        let message = 'Failed to broadcast alert';
+
+        if (responseData) {
+          if (responseData.message) {
+            message = responseData.message;
+          } else if (responseData.minutes_remaining !== undefined) {
+            message = `Rate limit exceeded: ${responseData.minutes_remaining} minutes remaining`;
+          } else if (typeof responseData === 'string') {
+            message = responseData;
+          } else if (responseData.error) {
+            message = responseData.error;
+          }
+        }
+
+        set({ isLoading: false, error: message });
+        toast.error(message);
+      }
+    },
+
+    testAlertOne: async (yardId: string) => {
+      const token = useAuthStore.getState().token;
+      if (IS_PRODUCTION && !token) {
+        set({ error: 'Not authenticated' });
+        return;
+      }
+
+      set({ isLoading: true, error: null });
+      try {
+        await axios.post(
+          `${API_BASE}/yard/${encodeURIComponent(yardId)}/alert/testOne`,
+          {},
+          buildJsonConfig(token)
+        );
+
+        await useNodesStore.getState().fetchAlert(yardId);
+        set({ isLoading: false });
+        toast.success('Test one alert sent');
+      } catch (err: any) {
+        console.error('Failed to send test one alert:', err);
+        const message = err.response?.data?.error || 'Failed to send test one alert';
+        set({ isLoading: false, error: message });
+        toast.error(message);
+      }
+    },
+
+    testAlertAll: async (yardId: string) => {
+      const token = useAuthStore.getState().token;
+      if (IS_PRODUCTION && !token) {
+        set({ error: 'Not authenticated' });
+        return;
+      }
+
+      set({ isLoading: true, error: null });
+      try {
+        await axios.post(
+          `${API_BASE}/yard/${encodeURIComponent(yardId)}/alert/testAll`,
+          {},
+          buildJsonConfig(token)
+        );
+
+        await useNodesStore.getState().fetchAlert(yardId);
+        set({ isLoading: false });
+        toast.success('Test all alert sent');
+      } catch (err: any) {
+        console.error('Failed to send test all alert:', err);
+        
+        const responseData = err.response?.data;
+        let message = 'Failed to send test all alert';
+
+        if (responseData) {
+          if (responseData.message) {
+            message = responseData.message;
+          } else if (responseData.minutes_remaining !== undefined) {
+            message = `Rate limit exceeded: ${responseData.minutes_remaining} minutes remaining`;
+          } else if (typeof responseData === 'string') {
+            message = responseData;
+          } else if (responseData.error) {
+            message = responseData.error;
+          }
+        }
+
+        set({ isLoading: false, error: message });
+        toast.error(message);
+      }
+    },
+
+    addAlertUser: async (yardId: string, user: AlertRecord) => {
+      const token = useAuthStore.getState().token;
+      if (IS_PRODUCTION && !token) {
+        set({ error: 'Not authenticated' });
+        return;
+      }
+
+      set({ isLoading: true, error: null });
+      try {
+        await axios.put(
+          `${API_BASE}/yard/${encodeURIComponent(yardId)}/alert/user`,
+          {
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            language: user.language,
+          },
+          buildJsonConfig(token)
+        );
+
+        await useNodesStore.getState().fetchAlert(yardId);
+        set({ isLoading: false });
+        toast.success('Alert user saved');
+      } catch (err: any) {
+        console.error('Failed to save alert user:', err);
+        const message = err.response?.data?.error || 'Failed to save alert user';
+        set({ isLoading: false, error: message });
+        toast.error(message);
+        throw err;
+      }
+    },
+
+    deleteAlertUser: async (yardId: string, email: string) => {
+      const token = useAuthStore.getState().token;
+      if (IS_PRODUCTION && !token) {
+        set({ error: 'Not authenticated' });
+        return;
+      }
+
+      set({ isLoading: true, error: null });
+      try {
+        await axios.delete(
+          `${API_BASE}/yard/${encodeURIComponent(yardId)}/alert/user`,
+          {
+            ...buildJsonConfig(token),
+            data: { email },
+          }
+        );
+
+        await useNodesStore.getState().fetchAlert(yardId);
+        set({ isLoading: false });
+        toast.success('Alert user deleted');
+      } catch (err: any) {
+        console.error('Failed to delete alert user:', err);
+        const message = err.response?.data?.error || 'Failed to delete alert user';
+        set({ isLoading: false, error: message });
+        toast.error(message);
+        throw err;
+      }
+    },
+
+    deleteAlertHistory: async (yardId: string, date: string | number) => {
+      const token = useAuthStore.getState().token;
+      if (IS_PRODUCTION && !token) {
+        const message = 'Not authenticated';
+        set({ error: message });
+        toast.error(message);
+        throw new Error(message);
+      }
+
+      set({ isLoading: true, error: null });
+      try {
+        const normalizedDate = typeof date === 'string' ? Date.parse(date) : date;
+        if (normalizedDate === undefined || normalizedDate === null || Number.isNaN(normalizedDate)) {
+          throw new Error('A valid history date is required');
+        }
+
+        await axios.delete(
+          `${API_BASE}/yard/${encodeURIComponent(yardId)}/alert/history/${normalizedDate}`,
+          buildJsonConfig(token)
+        );
+
+        await useNodesStore.getState().fetchAlert(yardId);
+        set({ isLoading: false });
+        toast.success('Run history entry deleted');
+      } catch (err: any) {
+        const message = err.response?.data?.error || err.message || 'Failed to delete alert history entry';
+        console.error('Failed to delete alert history entry:', err);
+        set({ isLoading: false, error: message });
+        toast.error(message);
+        throw err;
       }
     },
 
