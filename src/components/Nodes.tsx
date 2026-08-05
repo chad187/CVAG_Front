@@ -64,12 +64,20 @@ const Nodes: React.FC = () => {
                 <p className="text-sm text-gray-600">Welcome, {user.name}</p>
               )}
             </div>
-            <button
-              onClick={logout}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-            >
-              Logout
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => yardId && navigate(`/yard/${yardId}/alertControls`)}
+                className="bg-yellow-500 hover:bg-yellow-600 text-black px-4 py-2 rounded-md text-sm font-medium"
+              >
+                Alert Controls
+              </button>
+              <button
+                onClick={logout}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </header>

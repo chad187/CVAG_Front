@@ -9,6 +9,7 @@ import AllYards from './components/AllYards';
 import AllNodes from './components/AllNodes';
 import AllCompanies from './components/AllCompanies';
 import NodeDetails from './components/NodeDetails';
+import Alert from './components/Alert';
 import { Toaster } from 'react-hot-toast';
 import 'leaflet/dist/leaflet.css';
 
@@ -150,6 +151,10 @@ const App: React.FC = () => {
         <Route
           path="/company/:id/yards"
           element={isAuthenticated ? <Yards /> : <Navigate to="/login" replace />}
+        />
+        <Route
+          path="/yard/:id/alertControls"
+          element={isAuthenticated ? <Alert /> : <Navigate to="/login" replace />}
         />
         <Route
           path="/yard/:id/nodes"
