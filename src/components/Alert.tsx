@@ -15,6 +15,39 @@ interface RunHistoryItem {
   message: string;
 }
 
+const sanitizePhoneInput = (value: string) => value.replace(/\D/g, '').slice(0, 11);
+
+const normalizePhoneForSubmission = (value: string) => {
+  const digits = sanitizePhoneInput(value);
+
+  if (digits.length === 10) {
+    return `1${digits}`;
+  }
+
+  return digits;
+};
+
+const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
+const isValidPhone = (value: string) => {
+  const normalized = normalizePhoneForSubmission(value);
+  return normalized.length === 11 && normalized[0] === '1';
+};
+
+const formatPhoneForDisplay = (value: string | undefined) => {
+  const digits = normalizePhoneForSubmission(value || '');
+
+  if (digits.length === 11) {
+    return `${digits.slice(0, 1)}-${digits.slice(1, 4)}-${digits.slice(4, 7)}-${digits.slice(7)}`;
+  }
+
+  if (digits.length === 10) {
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+
+  return digits;
+};
+
 const Alert: React.FC = () => {
   const {
     AlertData,
@@ -81,7 +114,7 @@ const Alert: React.FC = () => {
     }
 
     setTestEmail(alertDetails.test_email || '');
-    setTestPhone(alertDetails.test_phone || '');
+    setTestPhone(sanitizePhoneInput(alertDetails.test_phone || ''));
     setRunHistory((alertDetails.run_history || []).slice().reverse());
   }, [alertDetails]);
 
@@ -207,6 +240,11 @@ const Alert: React.FC = () => {
       return;
     }
 
+    if (!isValidEmail(row.email)) {
+      setSubmitStatus('Please enter a valid email address before saving an alert user.');
+      return;
+    }
+
     try {
       await addAlertUser(yardId, row);
       setDirtyRows((current) => {
@@ -261,13 +299,23 @@ const Alert: React.FC = () => {
       return;
     }
 
+    if (!isValidEmail(testEmail)) {
+      setSubmitStatus('Please enter a valid test email address.');
+      return;
+    }
+
+    if (!isValidPhone(testPhone)) {
+      setSubmitStatus('Please enter a valid test phone number.');
+      return;
+    }
+
     try {
       await submitAlertMessage(yardId, {
         message,
         last_run: lastRun,
         cool_down: coolDownAmount ? Number(coolDownAmount) * 60 * 1_000_000_000 : 0,
         test_email: testEmail,
-        test_phone: testPhone,
+        test_phone: normalizePhoneForSubmission(testPhone),
         run_history: runHistory,
       });
       setSubmitStatus('Alert form submitted successfully.');
@@ -437,9 +485,11 @@ const Alert: React.FC = () => {
                 <input
                   id="testPhone"
                   type="tel"
+                  inputMode="numeric"
+                  maxLength={11}
                   value={testPhone}
-                  onChange={(e) => setTestPhone(e.target.value)}
-                  placeholder="+1 555 010 1010"
+                  onChange={(e) => setTestPhone(sanitizePhoneInput(e.target.value))}
+                  placeholder="12092399426"
                   style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px' }}
                 />
               </div>
@@ -515,7 +565,7 @@ const Alert: React.FC = () => {
                   <td style={{ padding: '16px', color: '#374151' }}>
                     <input
                       type="tel"
-                      value={record.phone}
+                      value={formatPhoneForDisplay(record.phone)}
                       readOnly
                       style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', backgroundColor: '#f9fafb', fontSize: '14px' }}
                     />
