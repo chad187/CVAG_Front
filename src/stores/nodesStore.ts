@@ -56,6 +56,7 @@ interface RunHistoryRecord {
 
 interface AlertDetailsPayload {
   message: string;
+  test_message: string;
   last_run: string;
   cool_down: number | string;
   test_email: string;
@@ -121,6 +122,7 @@ interface NodesState {
     yardId: string,
     payload: {
       message: string;
+      test_message: string;
       last_run: string;
       cool_down: number;
       test_email: string;
@@ -364,6 +366,7 @@ export const useNodesStore = create<NodesState>()(
 
         const alertDetails: AlertDetailsPayload = {
           message: Array.isArray(data.messages) && data.messages.length > 0 ? data.messages[0].message || '' : '',
+          test_message: Array.isArray(data.test_messages) && data.test_messages.length > 0 ? data.test_messages[0].message || '' : '',
           last_run: data.last_run || '',
           cool_down: data.cool_down ?? '',
           test_email: data.test_email || '',
@@ -385,6 +388,7 @@ export const useNodesStore = create<NodesState>()(
 
     submitAlertMessage: async (yardId: string, payload: {
       message: string;
+      test_message: string;
       last_run: string;
       cool_down: number;
       test_email: string;
@@ -401,6 +405,7 @@ export const useNodesStore = create<NodesState>()(
       try {
         const outgoingPayload = {
           message: payload.message,
+          test_message: payload.test_message,
           cool_down: payload.cool_down,
           test_email: payload.test_email,
           test_phone: payload.test_phone,

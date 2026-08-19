@@ -68,6 +68,7 @@ const Alert: React.FC = () => {
   const { id: yardId } = useParams<{ id: string }>();
 
   const [message, setMessage] = useState('');
+  const [testMessage, setTestMessage] = useState('');
   const [lastRun, setLastRun] = useState('');
   const [coolDownAmount, setCoolDownAmount] = useState('');
   const [testEmail, setTestEmail] = useState('');
@@ -103,6 +104,7 @@ const Alert: React.FC = () => {
     }
 
     setMessage(alertDetails.message || '');
+    setTestMessage(alertDetails.test_message || '');
     setLastRun(formatUtcForLocalInput(alertDetails?.last_run || ''));
 
     const coolDownValue = typeof alertDetails.cool_down === 'number' ? alertDetails.cool_down : Number(alertDetails.cool_down || 0);
@@ -312,6 +314,7 @@ const Alert: React.FC = () => {
     try {
       await submitAlertMessage(yardId, {
         message,
+        test_message: testMessage,
         last_run: lastRun,
         cool_down: coolDownAmount ? Number(coolDownAmount) * 60 * 1_000_000_000 : 0,
         test_email: testEmail,
@@ -413,26 +416,49 @@ const Alert: React.FC = () => {
                 Test One Alert
               </button>
             </div>
-            <div>
-              <label htmlFor="AlertMessage" style={{ fontWeight: 600, color: '#1f2937', display: 'block', marginBottom: '8px' }}>
-                Alert Message
-              </label>
-              <textarea
-                id="AlertMessage"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Type paragraphs of words here..."
-                rows={6}
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  borderRadius: '8px',
-                  border: '1px solid #d1d5db',
-                  resize: 'vertical',
-                  fontSize: '14px',
-                  fontFamily: 'inherit',
-                }}
-              />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div>
+                <label htmlFor="AlertMessage" style={{ fontWeight: 600, color: '#1f2937', display: 'block', marginBottom: '8px' }}>
+                  Alert Message
+                </label>
+                <textarea
+                  id="AlertMessage"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Type paragraphs of words here..."
+                  rows={6}
+                  style={{
+                    width: '100%',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    border: '1px solid #d1d5db',
+                    resize: 'vertical',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                  }}
+                />
+              </div>
+              <div>
+                <label htmlFor="TestMessage" style={{ fontWeight: 600, color: '#1f2937', display: 'block', marginBottom: '8px' }}>
+                  Test Message
+                </label>
+                <textarea
+                  id="TestMessage"
+                  value={testMessage}
+                  onChange={(e) => setTestMessage(e.target.value)}
+                  placeholder="Type paragraphs of words here..."
+                  rows={6}
+                  style={{
+                    width: '100%',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    border: '1px solid #d1d5db',
+                    resize: 'vertical',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                  }}
+                />
+              </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
@@ -502,7 +528,7 @@ const Alert: React.FC = () => {
                   disabled={isLoading || !message.trim()}
                   className="bg-green-600 hover:bg-green-700 disabled:bg-slate-300 text-white px-5 py-2 rounded-md text-sm font-medium transition-colors"
                 >
-                  {isLoading ? 'Submitting...' : 'Submit'}
+                  {isLoading ? 'Updating...' : 'Update'}
                 </button>
                 {submitStatus && (
                   <span style={{ color: '#2563eb', fontSize: '14px' }}>{submitStatus}</span>
